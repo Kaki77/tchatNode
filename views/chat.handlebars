@@ -10,7 +10,7 @@
 <div class="container" style="background-color:black">
    <div id="talkingTo" style="color:white;background-color:black"></div>
    <ul id="messages"></ul>
-   <div id="typing"></div>
+   <div id="typing" style="color:white;"></div>
    <form id="form" action="">   
       <input class="form-control" id="input" autocomplete="off" /><button>Send</button>
    </form>
@@ -52,11 +52,11 @@ input.addEventListener('input',function(e)
 {
    if(input.value)
    {
-      socket.emit('isTyping',sessionStorage.getItem("talkingTo"),true);
+      socket.emit('isTyping',sessionStorage.getItem("talkingToID"),true);
    }
    else
    {
-      socket.emit('isTyping',sessionStorage.getItem("talkingTo"),false);
+      socket.emit('isTyping',sessionStorage.getItem("talkingToID"),false);
    }
    
 })
@@ -64,7 +64,7 @@ form.addEventListener('submit', function(e) {
     e.preventDefault();
     if (input.value)
     {
-        socket.emit('chat message',sessionStorage.getItem("talkingTo"),input.value);
+        socket.emit('chat message',sessionStorage.getItem("talkingToID"),input.value);
         if(lastUsername!=sessionStorage.getItem("username"))
         {
             var item = document.createElement('li');
@@ -106,7 +106,7 @@ socket.on('session',function(username,sessionID,userID,avatar)
 });
 
 socket.on('isTyping', function(user,bool) {
-   if(bool && user.userID==sessionStorage.getItem("talkingTo"))
+   if(bool && user.userID==sessionStorage.getItem("talkingToID"))
    {
       document.getElementById('typing').innerHTML="<h6 style='font-style:italic'>"+user.username+" est en train d'écrire...</h6>";
       window.scrollTo(0, document.body.scrollHeight);
@@ -118,7 +118,7 @@ socket.on('isTyping', function(user,bool) {
 });
 
 socket.on('chat message', function(fromUsername,fromID,msg) {
-   if(fromID==sessionStorage.getItem("talkingTo"))
+   if(fromID==sessionStorage.getItem("talkingToID"))
    {
       document.getElementById('typing').innerHTML='';
       if(lastUsername!=fromUsername)
@@ -166,7 +166,7 @@ socket.on('get list',function(list)
             listUser.appendChild(item);
             item.children[0].onclick=function()
             {
-               if(!this.classList.contains(sessionStorage.getItem("talkingTo")))
+               if(!this.classList.contains(sessionStorage.getItem("talkingToID")))
                {
                   socket.emit("messages list",this.classList[0]);
                }
