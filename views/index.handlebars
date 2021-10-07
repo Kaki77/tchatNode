@@ -1,0 +1,36 @@
+<div class="container">
+    <div class="row">
+        <div class="col-6">
+            <div class="alert-danger">
+                {{#if expressFlash}}
+                    {{expressFlash}}
+                {{/if}}
+            </div>
+            <br/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <div class="alert-success">
+                {{#if post.success}}
+                    {{post.success}}
+                {{/if}}
+            </div>
+            <br/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <form method="POST">   
+                <label for="username">Nom d'utilisateur</label>
+                <input type="text" class="form-control" autocomplete="off" name="username">
+                <br/>
+                <label for="password">Mot de passe</label>
+                <input type="password" class="form-control" autocomplete="off" name="password">
+                <br/>
+                <button><a href="/register">S'inscrire</a></button>
+                <button>Se connecter</button>
+            </form>
+        </div>
+    </div>
+</div>

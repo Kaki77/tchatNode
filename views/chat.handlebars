@@ -1,0 +1,233 @@
+<div class="container-fluid w-100 sticky-top">
+   <div class="row">
+      <div class="col-1">
+         {{> sideMenu }}
+      </div>
+      <div class="col-10 text-center"><h1>Mon Superbe Tchat</h1>
+      </div>
+   </div>
+</div>
+<div class="container" style="background-color:black">
+   <div id="talkingTo" style="color:white;background-color:black"></div>
+   <ul id="messages"></ul>
+   <div id="typing"></div>
+   <form id="form" action="">   
+      <input class="form-control" id="input" autocomplete="off" /><button>Send</button>
+   </form>
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/siofu/client.js"></script>
+
+
+<script>
+
+
+var form = document.getElementById('form');
+var input = document.getElementById('input');
+var menu = document.getElementById('buttonMenu');
+var fileInput = document.getElementById('fileupload');
+var avatar = document.getElementById('avatar');
+var lastUsername="";
+input.disabled=true;
+var socket = io();
+var uploader = new SocketIOFileUpload(socket);
+uploader.listenOnInput(fileInput);
+const sessionID=sessionStorage.getItem("sessionID");
+if(sessionID)
+{
+   socket.auth={ sessionID };
+   socket.emit('join');
+}
+else
+{
+   socket.emit('join',"{{flashUsername}}","{{flashId}}","{{flashAvatar}}");
+}
+if(sessionStorage.getItem("talkingToID"))
+{
+   socket.emit("messages list",sessionStorage.getItem("talkingToID"));
+}
+input.addEventListener('input',function(e)
+{
+   if(input.value)
+   {
+      socket.emit('isTyping',sessionStorage.getItem("talkingTo"),true);
+   }
+   else
+   {
+      socket.emit('isTyping',sessionStorage.getItem("talkingTo"),false);
+   }
+   
+})
+form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (input.value)
+    {
+        socket.emit('chat message',sessionStorage.getItem("talkingTo"),input.value);
+        if(lastUsername!=sessionStorage.getItem("username"))
+        {
+            var item = document.createElement('li');
+            item.classList.add('text-end');
+            item.style.marginLeft='auto';
+            item.style.marginRight='0';
+            item.innerHTML ="<p style='font-style:italic;text-decoration:underline'>"+sessionStorage.getItem("username")+" :</p>"+input.value;
+            messages.appendChild(item);
+            lastUsername=sessionStorage.getItem("username"); 
+        }
+        else
+        {
+            var item = document.getElementById('messages').lastChild.innerHTML+="<br/>"+input.value; 
+        }
+        window.scrollTo(0, document.body.scrollHeight);
+        input.value = '';
+    }
+});
+
+menu.onclick=function()
+{
+   socket.emit('get list');
+};
+
+avatar.onclick=function()
+{
+   fileInput.click();
+}
+
+socket.on('session',function(username,sessionID,userID,avatar)
+{
+   socket.auth={sessionID};
+   sessionStorage.setItem("username",username);
+   sessionStorage.setItem("sessionID",sessionID);
+   sessionStorage.setItem("avatar",avatar);
+   socket.userID=userID;
+   document.getElementsByClassName('offcanvas-header')[0].getElementsByTagName('img')[0].src=sessionStorage.getItem('avatar');
+   document.getElementById('offcanvasNavbarLabel').innerHTML=sessionStorage.getItem('username');
+});
+
+socket.on('isTyping', function(user,bool) {
+   if(bool && user.userID==sessionStorage.getItem("talkingTo"))
+   {
+      document.getElementById('typing').innerHTML="<h6 style='font-style:italic'>"+user.username+" est en train d'écrire...</h6>";
+      window.scrollTo(0, document.body.scrollHeight);
+   }
+   else
+   {
+      document.getElementById('typing').innerHTML="";
+   }
+});
+
+socket.on('chat message', function(fromUsername,fromID,msg) {
+   if(fromID==sessionStorage.getItem("talkingTo"))
+   {
+      document.getElementById('typing').innerHTML='';
+      if(lastUsername!=fromUsername)
+      {
+         var item = document.createElement('li');
+         item.innerHTML ="<p style='font-style:italic;text-decoration:underline'>"+fromUsername+" :</p>"+msg;
+         messages.appendChild(item);
+         lastUsername=fromUsername;
+      }
+      else
+      {
+         document.getElementById('messages').lastChild.innerHTML+="<br/>"+msg;
+      }
+      
+      window.scrollTo(0, document.body.scrollHeight);
+   }
+    
+});
+/*socket.on('connexion message', function(username) {
+    var item = document.createElement('li');
+    item.textContent = username+" est connecté";
+    item.style.fontStyle="italic";
+    messages.appendChild(item);
+    lastUsername="";
+    window.scrollTo(0, document.body.scrollHeight);
+});*/
+socket.on('get list',function(list)
+{
+   for(i=0;i<list.length;i++)
+   {
+      if(list[i].username!=sessionStorage.getItem("username"))
+      {
+         if(!document.getElementsByClassName(list[i].userID)[0])
+         {
+            var item=document.createElement('li');
+            if(list[i].isConnected==true)
+            {
+               item.innerHTML="<button type='button'><div class='container'><div class='row'><div class='col-5 text-center'>"+list[i].username+"<img class='rounded-circle' src='"+list[i].avatar+"' width='100' height='100'><p><i class='icon connected'></i>Online</p></div><div class='col-7 text-center'><p>Mon message</p></div></div></div></button>";
+            }
+            else
+            {
+               item.innerHTML="<button type='button'><div class='container'><div class='row'><div class='col-5 text-center'>"+list[i].username+"<img class='rounded-circle' src='"+list[i].avatar+"' width='100' height='100'><p><i class='icon'></i>Offline</p></div><div class='col-7 text-center'><p>Mon message</p></div></div></div></button>";
+            }
+            item.children[0].classList.add(list[i].userID);
+            listUser.appendChild(item);
+            item.children[0].onclick=function()
+            {
+               if(!this.classList.contains(sessionStorage.getItem("talkingTo")))
+               {
+                  socket.emit("messages list",this.classList[0]);
+               }
+               let openedCanvas=bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasNavbar'));
+               openedCanvas.hide();
+            }
+         }
+         else
+         {
+            if(list[i].isConnected==true)
+            {
+               document.getElementsByClassName(list[i].userID)[0].getElementsByTagName('p')[0].innerHTML="<i class='icon connected'></i>Online";
+
+            }
+            else
+            {
+               document.getElementsByClassName(list[i].userID)[0].getElementsByTagName('p')[0].innerHTML="<i class='icon'></i>Offline";
+            }
+         }
+      } 
+   }
+});
+socket.on('messages list',function(user,msg)
+{
+   lastUsername='';
+   document.getElementById("messages").innerHTML='';
+   msg.forEach(function(element)
+   {
+      if(lastUsername!=element.from)
+      {
+         var item = document.createElement('li');
+         if(sessionStorage.getItem("username")===element.from)
+         {
+            item.classList.add('text-end');
+            item.style.marginLeft='auto';
+            item.style.marginRight='0';
+         };
+         item.innerHTML ="<p style='font-style:italic;text-decoration:underline'>"+element.from+" :</p>"+element.content;
+         messages.appendChild(item);
+      }
+      else
+      {
+         document.getElementById('messages').lastChild.innerHTML+="<br/>"+element.content;
+      };
+      window.scrollTo(0, document.body.scrollHeight);
+      lastUsername=element.from;
+   });
+   if(input.disabled==true)
+   {
+      input.disabled=false;
+   }
+   sessionStorage.setItem("talkingToID",user.userID);
+   sessionStorage.setItem("talkingToUsername",user.username);
+   sessionStorage.setItem("talkingToAvatar",user.avatar);
+   document.getElementById("talkingTo").innerHTML="<div>"+user.username+"<br/><img class='rounded-circle' src='"+user.avatar+"' witdh='50' height='50'><br><p><i class='icon connected'></i>Online</p></div>"
+});
+
+socket.on('change avatar',function(newAvatar)
+{
+   sessionStorage.setItem("avatar",newAvatar);
+   document.getElementsByClassName('offcanvas-header')[0].getElementsByTagName('img')[0].src=sessionStorage.getItem('avatar');
+})
+
+</script>
